@@ -7,15 +7,18 @@ using UnityEngine;
 using UnityEngine.UI;
 
 [DisallowMultipleComponent]
-public class SquareGrid : MonoBehaviour, IGrid
+public class SquareGrid : MonoBehaviour, IGrid, IInput, IMarker
 {
     [SerializeField] Grid grid;
+    [SerializeField] Marker marker;
 
     private Input input;
     private SquareCell[,] squareCells;
     private Canvas gridCanvas;
     public static SquareGrid fieldGrid { get; private set; }
-    public static IGrid mainGrid { get => fieldGrid as IGrid; }
+    public static IGrid MainGrid { get => fieldGrid as IGrid; }
+    public static IInput GridInput { get => fieldGrid as IInput; }
+    public static IMarker GridMarker { get => fieldGrid as IMarker; }
     void Awake()
     {
         // Just filling the fields
@@ -34,14 +37,28 @@ public class SquareGrid : MonoBehaviour, IGrid
         unit.transform.position = new Vector3(x, unit.transform.position.y, y);
         squareCells[unit.coordinates.X, unit.coordinates.Y].AddUnit(unit);
     }
-    public void Initialize()
-    {
-        grid.Initialize(transform);
-    }
+    public void Initialize() => grid.Initialize(transform);
 
     Vector2 IGrid.GetWorldBorders() => grid.GetWorldBorders();
-
     void IGrid.TransferCoordinates(Coordinates coords, out float x, out float y) => grid.TransferCoordinates(coords, out x, out y);
+    SquareCell IInput.SelectCellFromMouse() => input.SelectCellFromMouse();
+    int IInput.WaitForSelection(Action<SquareCell> cellAction) => input.WaitForSelection(cellAction);
+    void IInput.InterruptWaiting(int id) => input.InterruptWaiting(id);
+
+    SquareCell[] IGrid.QuickestPath(SquareCell start, SquareCell end, MovingLevels movingLevels)
+    {
+        Coordinates[] coords = grid.QuickestPath(start, end, movingLevels);
+        SquareCell[] cells = new SquareCell[coords.Length];
+        for (int i = 0; i < cells.Length; i++)
+        {
+            Coordinates crds = coords[i];
+            cells[i] = grid.squareCells[crds.X, crds.Y];
+        }
+        return cells;
+    }
+
+    void IMarker.Mark(SquareCell cell) => marker.Mark(cell);
+    void IMarker.UnmarkAll() => marker.UnmarkAll();
 
     [System.Serializable]
     private class Grid
@@ -53,7 +70,7 @@ public class SquareGrid : MonoBehaviour, IGrid
         public int height;
         public int width;
 
-        private SquareCell[,] squareCells;
+        public SquareCell[,] squareCells;
         [HideInInspector]
         public Canvas gridCanvas;
 
@@ -149,6 +166,123 @@ public class SquareGrid : MonoBehaviour, IGrid
             var res = AStarAlgorithm.FindPath(possibleField, start.coordinates, end.coordinates);
             return res;
         }
+        private class AStarAlgorithm
+        {
+
+            public class PathNode
+            {
+                public Coordinates Position { get; set; }
+                public int PathLengthFromStart { get; set; }
+                public PathNode CameFrom { get; set; }
+                public int HeuristicEstimatePathLength { get; set; }
+                public int EstimateFullPathLength
+                {
+                    get
+                    {
+                        return this.PathLengthFromStart + this.HeuristicEstimatePathLength;
+                    }
+                }
+            }
+            public static Coordinates[] FindPath(bool[,] field, Coordinates start, Coordinates goal)
+            {
+
+                var closedSet = new Collection<PathNode>();
+                var openSet = new Collection<PathNode>();
+
+                PathNode startNode = new PathNode()
+                {
+                    Position = start,
+                    CameFrom = null,
+                    PathLengthFromStart = 0,
+                    HeuristicEstimatePathLength = GetHeuristicPathLength(start, goal)
+                };
+                openSet.Add(startNode);
+                while (openSet.Count > 0)
+                {
+
+                    var currentNode = openSet.OrderBy(node =>
+                      node.EstimateFullPathLength).First();
+
+                    if (currentNode.Position == goal)
+                        return GetPathForNode(currentNode);
+
+                    openSet.Remove(currentNode);
+                    closedSet.Add(currentNode);
+
+                    foreach (var neighbourNode in GetNeighbours(currentNode, goal, field))
+                    {
+
+                        if (closedSet.Count(node => node.Position == neighbourNode.Position) > 0)
+                            continue;
+                        var openNode = openSet.FirstOrDefault(node =>
+                          node.Position == neighbourNode.Position);
+
+                        if (openNode == null)
+                            openSet.Add(neighbourNode);
+                        else
+                          if (openNode.PathLengthFromStart < neighbourNode.PathLengthFromStart)
+                        {
+
+                            openNode.CameFrom = currentNode;
+                            openNode.PathLengthFromStart = neighbourNode.PathLengthFromStart;
+                        }
+                    }
+                }
+
+                return null;
+            }
+            private static int GetDistanceBetweenNeighbours()
+            {
+                return 1;
+            }
+            private static int GetHeuristicPathLength(Coordinates from, Coordinates to)
+            {
+                return Math.Abs(from.X - to.X) + Math.Abs(from.Y - to.Y);
+            }
+            private static Collection<PathNode> GetNeighbours(PathNode pathNode, Coordinates goal, bool[,] field)
+            {
+                var result = new Collection<PathNode>();
+
+
+                Coordinates[] neighbourPoints = new Coordinates[4];
+                neighbourPoints[0] = new Coordinates(pathNode.Position.X + 1, pathNode.Position.Y);
+                neighbourPoints[1] = new Coordinates(pathNode.Position.X - 1, pathNode.Position.Y);
+                neighbourPoints[2] = new Coordinates(pathNode.Position.X, pathNode.Position.Y + 1);
+                neighbourPoints[3] = new Coordinates(pathNode.Position.X, pathNode.Position.Y - 1);
+
+                foreach (var point in neighbourPoints)
+                {
+                    if (point.X < 0 || point.X >= field.GetLength(0))
+                        continue;
+                    if (point.Y < 0 || point.Y >= field.GetLength(1))
+                        continue;
+                    if (!field[point.X, point.Y])
+                        continue;
+                    var neighbourNode = new PathNode()
+                    {
+                        Position = point,
+                        CameFrom = pathNode,
+                        PathLengthFromStart = pathNode.PathLengthFromStart +
+                        GetDistanceBetweenNeighbours(),
+                        HeuristicEstimatePathLength = GetHeuristicPathLength(point, goal)
+                    };
+                    result.Add(neighbourNode);
+                }
+                return result;
+            }
+            private static Coordinates[] GetPathForNode(PathNode pathNode)
+            {
+                var result = new List<Coordinates>();
+                var currentNode = pathNode;
+                while (currentNode != null)
+                {
+                    result.Add(currentNode.Position);
+                    currentNode = currentNode.CameFrom;
+                }
+                result.Reverse();
+                return result.ToArray();
+            }
+        }
     }
     private class Input
     {
@@ -163,11 +297,11 @@ public class SquareGrid : MonoBehaviour, IGrid
             return hit.transform.gameObject.GetComponent<SquareCell>();
         }
         /// <summary>
-        /// Will invoke <paramref name="getCell"/> after selecting a square
+        /// Will invoke <paramref name="cellAction"/> after selecting a square
         /// </summary>
-        /// <param name="getCell"></param>
+        /// <param name="cellAction"></param>
         /// <returns>ID to interrupt waiting <see cref="InterruptWaiting(int)"/></returns>
-        public int WaitForSelection(Action<SquareCell> getCell)
+        public int WaitForSelection(Action<SquareCell> cellAction)
         {
             Func<bool> checker = () =>
             {
@@ -176,7 +310,7 @@ public class SquareGrid : MonoBehaviour, IGrid
                     var cell = SelectCellFromMouse();
                     if (cell != null)
                     {
-                        getCell.Invoke(cell);
+                        cellAction.Invoke(cell);
                         return true;
                     }
                 }
@@ -190,6 +324,28 @@ public class SquareGrid : MonoBehaviour, IGrid
         public void InterruptWaiting(int id)
         {
             GameManager.Manager.StopCoroutine(id);
+        }
+    }
+    [System.Serializable]
+    private class Marker
+    {
+        [SerializeField] Material markMaterial;
+
+        List<(Renderer rend, Material mat)> marked = new List<(Renderer, Material)>();
+        public void Mark(SquareCell cell)
+        {
+            Renderer rend = cell.GetComponent<Renderer>();
+            var mat = rend.material;
+            marked.Add((rend, mat));
+            rend.material = markMaterial;
+        }
+        public void UnmarkAll()
+        {
+            foreach (var item in marked)
+            {
+                item.rend.material = item.mat;
+            }
+            marked.Clear();
         }
     }
 }
@@ -207,129 +363,44 @@ public interface IGrid
     /// <param name="x"></param>
     /// <param name="y"></param>
     void TransferCoordinates(Coordinates coords, out float x, out float y);
+    /// <summary>
+    /// A* algorithm pathfinder
+    /// </summary>
+    /// <param name="start"></param>
+    /// <param name="end"></param>
+    /// <param name="movingLevels"></param>
+    SquareCell[] QuickestPath(SquareCell start, SquareCell end, MovingLevels movingLevels);
 }
-
+public interface IInput
+{
+    /// <summary>
+    /// Select square cell from mouse input
+    /// </summary>
+    /// <returns></returns>
+    SquareCell SelectCellFromMouse();
+    /// <summary>
+    /// Will invoke <paramref name="getCell"/> after selecting a square
+    /// </summary>
+    /// <param name="getCell"></param>
+    /// <returns>ID to interrupt waiting <see cref="InterruptWaiting(int)"/></returns>
+    int WaitForSelection(Action<SquareCell> getCell);
+    /// <summary>
+    /// Interrupt <see cref="WaitForSelection(Action{SquareCell})"/>
+    /// </summary>
+    void InterruptWaiting(int id);
+}
+public interface IMarker
+{
+    void Mark(SquareCell cell);
+    /// <summary>
+    /// Unmark all marked cells
+    /// </summary>
+    void UnmarkAll();
+}
 public enum MovingLevels
 {
     simpleMoving,
     ableToCrossWater,
     ableToStayInWater,
     ableToFly
-}
-public class AStarAlgorithm
-{
-    
-    public class PathNode
-    {
-        public Coordinates Position { get; set; }
-        public int PathLengthFromStart { get; set; }
-        public PathNode CameFrom { get; set; }
-        public int HeuristicEstimatePathLength { get; set; }
-        public int EstimateFullPathLength
-        {
-            get
-            {
-                return this.PathLengthFromStart + this.HeuristicEstimatePathLength;
-            }
-        }
-    }
-    public static Coordinates[] FindPath(bool[,] field, Coordinates start, Coordinates goal)
-    {
-
-        var closedSet = new Collection<PathNode>();
-        var openSet = new Collection<PathNode>();
-
-        PathNode startNode = new PathNode()
-        {
-            Position = start,
-            CameFrom = null,
-            PathLengthFromStart = 0,
-            HeuristicEstimatePathLength = GetHeuristicPathLength(start, goal)
-        };
-        openSet.Add(startNode);
-        while (openSet.Count > 0)
-        {
-
-            var currentNode = openSet.OrderBy(node =>
-              node.EstimateFullPathLength).First();
-
-            if (currentNode.Position == goal)
-                return GetPathForNode(currentNode);
-
-            openSet.Remove(currentNode);
-            closedSet.Add(currentNode);
-
-            foreach (var neighbourNode in GetNeighbours(currentNode, goal, field))
-            {
-
-                if (closedSet.Count(node => node.Position == neighbourNode.Position) > 0)
-                    continue;
-                var openNode = openSet.FirstOrDefault(node =>
-                  node.Position == neighbourNode.Position);
-
-                if (openNode == null)
-                    openSet.Add(neighbourNode);
-                else
-                  if (openNode.PathLengthFromStart < neighbourNode.PathLengthFromStart)
-                {
-
-                    openNode.CameFrom = currentNode;
-                    openNode.PathLengthFromStart = neighbourNode.PathLengthFromStart;
-                }
-            }
-        }
-
-        return null;
-    }
-    private static int GetDistanceBetweenNeighbours()
-    {
-        return 1;
-    }
-    private static int GetHeuristicPathLength(Coordinates from, Coordinates to)
-    {
-        return Math.Abs(from.X - to.X) + Math.Abs(from.Y - to.Y);
-    }
-    private static Collection<PathNode> GetNeighbours(PathNode pathNode, Coordinates goal, bool[,] field)
-    {
-        var result = new Collection<PathNode>();
-
-
-        Coordinates[] neighbourPoints = new Coordinates[4];
-        neighbourPoints[0] = new Coordinates(pathNode.Position.X + 1, pathNode.Position.Y);
-        neighbourPoints[1] = new Coordinates(pathNode.Position.X - 1, pathNode.Position.Y);
-        neighbourPoints[2] = new Coordinates(pathNode.Position.X, pathNode.Position.Y + 1);
-        neighbourPoints[3] = new Coordinates(pathNode.Position.X, pathNode.Position.Y - 1);
-
-        foreach (var point in neighbourPoints)
-        {
-            if (point.X < 0 || point.X >= field.GetLength(0))
-                continue;
-            if (point.Y < 0 || point.Y >= field.GetLength(1))
-                continue;
-            if(!field[point.X, point.Y])
-                continue;
-            var neighbourNode = new PathNode()
-            {
-                Position = point,
-                CameFrom = pathNode,
-                PathLengthFromStart = pathNode.PathLengthFromStart +
-                GetDistanceBetweenNeighbours(),
-                HeuristicEstimatePathLength = GetHeuristicPathLength(point, goal)
-            };
-            result.Add(neighbourNode);
-        }
-        return result;
-    }
-    private static Coordinates[] GetPathForNode(PathNode pathNode)
-    {
-        var result = new List<Coordinates>();
-        var currentNode = pathNode;
-        while (currentNode != null)
-        {
-            result.Add(currentNode.Position);
-            currentNode = currentNode.CameFrom;
-        }
-        result.Reverse();
-        return result.ToArray();
-    }
 }
