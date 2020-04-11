@@ -64,7 +64,7 @@
   <ItemGroup>
     <Compile Include="Assets\CameraMover.cs" />
     <Compile Include="Assets\CivilizationManager.cs" />
-    <Compile Include="Assets\GameManager.cs" />
+    <Compile Include="Assets\GameManagerComponent.cs" />
     <Compile Include="Assets\Grid\SquareCell.cs" />
     <Compile Include="Assets\Grid\SquareGrid.cs" />
     <Compile Include="Assets\Technology\ResearchManager.cs" />

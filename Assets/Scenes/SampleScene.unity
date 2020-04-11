@@ -211,11 +211,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   controls:
-    cameraHorizontalMove: Horizontal
-    cameraVerticalMove: Vertical
-    cameraRotate: Rotate
+    cameraHorizontalMove: 
+    cameraVerticalMove: 
+    cameraRotate: 
   settings:
-    inputDelay: 0.3
+    inputDelay: 0.1
 --- !u!1001 &269545110
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -519,14 +519,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3103b1edc69820a4eb44e78d80f78e54, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  prefab: {fileID: 3531560570163943204, guid: 521384f6d5c0fd646ba062ca2abaebda, type: 3}
-  prefabLength: 10
-  labelPrefab: {fileID: 1978801922946237890, guid: c5cf69bef95a50b49baf11e3c4f8ae41,
-    type: 3}
-  height: 7
-  width: 15
-  markingMaterial: {fileID: 2100000, guid: ed6271660f038194591f1e9e9dce74d0, type: 2}
-  defaultMaterial: {fileID: 2100000, guid: aa10448aff74b8b4caa99c480a92968d, type: 2}
+  grid:
+    prefab: {fileID: 0}
+    prefabLength: 10
+    labelPrefab: {fileID: 0}
+    height: 0
+    width: 0
+    gridCanvas: {fileID: 0}
 --- !u!4 &1192893677
 Transform:
   m_ObjectHideFlags: 0

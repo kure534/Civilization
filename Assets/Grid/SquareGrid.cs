@@ -7,7 +7,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 [DisallowMultipleComponent]
-public class SquareGrid : MonoBehaviour
+public class SquareGrid : MonoBehaviour, IGrid
 {
     [SerializeField] Grid grid;
 
@@ -15,6 +15,7 @@ public class SquareGrid : MonoBehaviour
     private SquareCell[,] squareCells;
     private Canvas gridCanvas;
     public static SquareGrid fieldGrid { get; private set; }
+    public static IGrid mainGrid { get => fieldGrid as IGrid; }
     void Awake()
     {
         // Just filling the fields
@@ -33,47 +34,15 @@ public class SquareGrid : MonoBehaviour
         unit.transform.position = new Vector3(x, unit.transform.position.y, y);
         squareCells[unit.coordinates.X, unit.coordinates.Y].AddUnit(unit);
     }
-    /// <summary>
-    /// A* algorithm pathfinder
-    /// </summary>
-    /// <param name="start"></param>
-    /// <param name="end"></param>
-    /// <param name="movingLevels"></param>
-    public Coordinates[] QuickestPath(SquareCell start, SquareCell end, MovingLevels movingLevels)
+    public void Initialize()
     {
-        (int, int) endCoords = end.coordinates;
-        int[,] possibleField = new int[grid.height, grid.width];
-        for (int i = 0; i < grid.height; i++)
-        {
-            for (int j = 0; j < grid.width; j++)
-            {
-                if((i == endCoords.Item1) && (j == endCoords.Item2))
-                {
-                    possibleField[i, j] = 1;
-                }
-                else
-                {
-                    switch (movingLevels)
-                    {
-                        case MovingLevels.simpleMoving:
-                            break;
-                        case MovingLevels.ableToCrossWater:
-                            break;
-                        case MovingLevels.ableToStayInWater:
-                            break;
-                        case MovingLevels.ableToFly:
-                            break;
-                        default:
-                            break;
-                    }
-                    possibleField[i, j] = 1;
-                }
-                
-            }
-        }
-        var res = AStarAlgorithm.FindPath(possibleField, start.coordinates, end.coordinates);
-        return res;
+        grid.Initialize(transform);
     }
+
+    Vector2 IGrid.GetWorldBorders() => grid.GetWorldBorders();
+
+    void IGrid.TransferCoordinates(Coordinates coords, out float x, out float y) => grid.TransferCoordinates(coords, out x, out y);
+
     [System.Serializable]
     private class Grid
     {
@@ -85,6 +54,7 @@ public class SquareGrid : MonoBehaviour
         public int width;
 
         private SquareCell[,] squareCells;
+        [HideInInspector]
         public Canvas gridCanvas;
 
         /// <summary>
@@ -138,6 +108,47 @@ public class SquareGrid : MonoBehaviour
             label.rectTransform.anchoredPosition = new Vector2(position.x, position.z);
             label.text = cell.coordinates.ToStringOnSeparateLines();
         }
+        /// <summary>
+        /// A* algorithm pathfinder
+        /// </summary>
+        /// <param name="start"></param>
+        /// <param name="end"></param>
+        /// <param name="movingLevels"></param>
+        public Coordinates[] QuickestPath(SquareCell start, SquareCell end, MovingLevels movingLevels)
+        {
+            (int, int) endCoords = end.coordinates;
+            bool[,] possibleField = new bool[height, width];
+            for (int i = 0; i < height; i++)
+            {
+                for (int j = 0; j < width; j++)
+                {
+                    if ((i == endCoords.Item1) && (j == endCoords.Item2))
+                    {
+                        possibleField[i, j] = true;
+                    }
+                    else
+                    {
+                        switch (movingLevels)
+                        {
+                            case MovingLevels.simpleMoving:
+                                break;
+                            case MovingLevels.ableToCrossWater:
+                                break;
+                            case MovingLevels.ableToStayInWater:
+                                break;
+                            case MovingLevels.ableToFly:
+                                break;
+                            default:
+                                break;
+                        }
+                        possibleField[i, j] = true;
+                    }
+
+                }
+            }
+            var res = AStarAlgorithm.FindPath(possibleField, start.coordinates, end.coordinates);
+            return res;
+        }
     }
     private class Input
     {
@@ -182,6 +193,21 @@ public class SquareGrid : MonoBehaviour
         }
     }
 }
+public interface IGrid
+{
+    /// <summary>
+    /// Get field borders in world space coordinates
+    /// </summary>
+    /// <returns></returns>
+    Vector2 GetWorldBorders();
+    /// <summary>
+    /// Transfer cell's grid coordinates to world space coordinates
+    /// </summary>
+    /// <param name="coords"></param>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    void TransferCoordinates(Coordinates coords, out float x, out float y);
+}
 
 public enum MovingLevels
 {
@@ -207,7 +233,7 @@ public class AStarAlgorithm
             }
         }
     }
-    public static Coordinates[] FindPath(int[,] field, Coordinates start, Coordinates goal)
+    public static Coordinates[] FindPath(bool[,] field, Coordinates start, Coordinates goal)
     {
 
         var closedSet = new Collection<PathNode>();
@@ -263,7 +289,7 @@ public class AStarAlgorithm
     {
         return Math.Abs(from.X - to.X) + Math.Abs(from.Y - to.Y);
     }
-    private static Collection<PathNode> GetNeighbours(PathNode pathNode, Coordinates goal, int[,] field)
+    private static Collection<PathNode> GetNeighbours(PathNode pathNode, Coordinates goal, bool[,] field)
     {
         var result = new Collection<PathNode>();
 
@@ -280,7 +306,7 @@ public class AStarAlgorithm
                 continue;
             if (point.Y < 0 || point.Y >= field.GetLength(1))
                 continue;
-            if(field[point.X, point.Y] == 0)
+            if(!field[point.X, point.Y])
                 continue;
             var neighbourNode = new PathNode()
             {

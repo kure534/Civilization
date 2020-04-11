@@ -13,10 +13,10 @@ public class CameraMover : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        controls = GameManager.GameControls;
+        controls = GameManager.Manager.GameControls;
 
         Vector2 offset = new Vector2(transform.position.x, transform.position.z);
-        Vector2 worldBorders = SquareGrid.fieldGrid.GetWorldBorders();
+        Vector2 worldBorders = SquareGrid.mainGrid.GetWorldBorders();
         topBorder = new Vector2(worldBorders.x + offset.x, worldBorders.y + offset.y);
         bottomBorder = new Vector2(offset.x, offset.y);
     }
@@ -29,7 +29,7 @@ public class CameraMover : MonoBehaviour
     }
     private void Move()
     {
-        transform.Translate(new Vector3(Input.GetAxis(controls.cameraHorizontalMove) * speed, 0, Input.GetAxis(controls.cameraVerticalMove) * speed));
+        transform.Translate(new Vector3(Input.GetAxis(controls.cameraHorizontalMove), 0, Input.GetAxis(controls.cameraVerticalMove)));
         Vector3 position = transform.position;
         if (position.x > topBorder.x) position.x = topBorder.x;
         else if (position.x < bottomBorder.x) position.x = bottomBorder.x;

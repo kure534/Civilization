@@ -5,7 +5,6 @@ using System;
 [DisallowMultipleComponent]
 public class GameManagerComponent : MonoBehaviour
 {
-
     GameManager gameManager;
 
     [SerializeField] GameControls controls;
@@ -14,6 +13,10 @@ public class GameManagerComponent : MonoBehaviour
     {
         gameManager = new GameManager(controls, settings, this);
         gameManager.Initialize();
+    }
+    void Start()
+    {
+        SquareGrid.fieldGrid.Initialize();
     }
     public IEnumerator Delaying((float time, Action action) tuple)
     {
