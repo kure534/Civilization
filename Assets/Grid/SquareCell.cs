@@ -5,6 +5,8 @@ using UnityEngine;
 public class SquareCell : MonoBehaviour
 {
     public Coordinates coordinates;
+    [SerializeReference]
+    public Terrain terrain;
     private List<UnitController> units = new List<UnitController>();
     /// <summary>
     /// Number of team that staying at the moment on this cell
@@ -26,6 +28,31 @@ public class SquareCell : MonoBehaviour
             }
         }
     }
+}
+[System.Serializable]
+public class Terrain
+{
+    public TerrainType Type { get; private set; }
+    public int Production { get => production; }
+    public int Trade { get => trade; }
+    public int Culture { get => culture; }
+    public int Coin { get => coin; }
+    public Terrain(TerrainType type)
+    {
+        Type = type;
+    }
+    [SerializeField] int production;
+    [SerializeField] int trade;
+    [SerializeField] int culture;
+    [SerializeField] int coin;
+}
+public enum TerrainType
+{
+    Desert,
+    Water,
+    Mountain,
+    Grassland,
+    Forest
 }
 [System.Serializable]
 public struct Coordinates

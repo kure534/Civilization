@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class CameraMover : MonoBehaviour
-{
+{           
     public float speed;
     public float rotationSpeed;
 
@@ -16,7 +16,7 @@ public class CameraMover : MonoBehaviour
         controls = GameManager.Manager.GameControls;
 
         Vector2 offset = new Vector2(transform.position.x, transform.position.z);
-        Vector2 worldBorders = SquareGrid.mainGrid.GetWorldBorders();
+        Vector2 worldBorders = SquareGrid.MainGrid.GetWorldBorders();
         topBorder = new Vector2(worldBorders.x + offset.x, worldBorders.y + offset.y);
         bottomBorder = new Vector2(offset.x, offset.y);
     }

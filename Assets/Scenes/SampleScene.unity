@@ -132,7 +132,7 @@ GameObject:
   - component: {fileID: 4072085}
   - component: {fileID: 4072084}
   m_Layer: 0
-  m_Name: GameObject
+  m_Name: CameraController
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -211,11 +211,23 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   controls:
-    cameraHorizontalMove: 
-    cameraVerticalMove: 
-    cameraRotate: 
+    cameraHorizontalMove: Horizontal
+    cameraVerticalMove: Vertical
+    cameraRotate: Rotate
   settings:
     inputDelay: 0.1
+--- !u!114 &248656137 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3531560570163943204, guid: 521384f6d5c0fd646ba062ca2abaebda,
+    type: 3}
+  m_PrefabInstance: {fileID: 6880332551709816836}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ce233dff3f1d91447aaf9e6401a1562d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &269545110
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -520,12 +532,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   grid:
-    prefab: {fileID: 0}
+    prefab: {fileID: 248656137}
     prefabLength: 10
-    labelPrefab: {fileID: 0}
-    height: 0
-    width: 0
+    labelPrefab: {fileID: 1839986266}
+    height: 10
+    width: 15
     gridCanvas: {fileID: 0}
+  marker:
+    markMaterial: {fileID: 2100000, guid: ed6271660f038194591f1e9e9dce74d0, type: 2}
 --- !u!4 &1192893677
 Transform:
   m_ObjectHideFlags: 0
@@ -706,6 +720,18 @@ Canvas:
   m_SortingLayerID: 0
   m_SortingOrder: 0
   m_TargetDisplay: 0
+--- !u!114 &1839986266 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1978801922946237890, guid: c5cf69bef95a50b49baf11e3c4f8ae41,
+    type: 3}
+  m_PrefabInstance: {fileID: 8814472895755643753}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &2091037240 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 6247552497047160605, guid: 5ac2703fddece694e938ab86811512e7,
@@ -739,7 +765,7 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Materials.Array.data[0]
       value: 
-      objectReference: {fileID: 2100000, guid: ed6271660f038194591f1e9e9dce74d0, type: 2}
+      objectReference: {fileID: 2100000, guid: aa10448aff74b8b4caa99c480a92968d, type: 2}
     - target: {fileID: 6196975418373303666, guid: 521384f6d5c0fd646ba062ca2abaebda,
         type: 3}
       propertyPath: m_LocalPosition.x

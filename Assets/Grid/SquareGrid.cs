@@ -22,6 +22,7 @@ public class SquareGrid : MonoBehaviour, IGrid, IInput, IMarker
     void Awake()
     {
         // Just filling the fields
+        input = new Input();
         fieldGrid = this;
         grid.gridCanvas = GetComponentInChildren<Canvas>();
     }
