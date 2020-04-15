@@ -49,6 +49,8 @@ public class SquareGrid : MonoBehaviour, IGrid, IInput, IMarker
     SquareCell[] IGrid.QuickestPath(SquareCell start, SquareCell end, MovingLevels movingLevels)
     {
         Coordinates[] coords = grid.QuickestPath(start, end, movingLevels);
+        if (coords == null) return null;
+
         SquareCell[] cells = new SquareCell[coords.Length];
         for (int i = 0; i < cells.Length; i++)
         {
@@ -75,6 +77,11 @@ public class SquareGrid : MonoBehaviour, IGrid, IInput, IMarker
         [HideInInspector]
         public Canvas gridCanvas;
 
+        [SerializeField] Terrainer terrainer;
+
+        public bool[,] water;
+        public bool[,] full;
+
         /// <summary>
         /// Get field borders in world space coordinates
         /// </summary>
@@ -89,14 +96,17 @@ public class SquareGrid : MonoBehaviour, IGrid, IInput, IMarker
         public void Initialize(in Transform parentObject)
         {
             squareCells = new SquareCell[height, width];
-
+            water = new bool[height, width];
+            full = new bool[height, width];
             for (int i = 0; i < height; i++)
             {
                 for (int j = 0; j < width; j++)
                 {
                     CreateCell(i, j, in parentObject);
+                    full[i, j] = true;
                 }
             }
+            
         }
         /// <summary>
         /// Transfer cell grid coordinates to world space coordinates
@@ -125,6 +135,15 @@ public class SquareGrid : MonoBehaviour, IGrid, IInput, IMarker
             label.rectTransform.SetParent(gridCanvas.transform, false);
             label.rectTransform.anchoredPosition = new Vector2(position.x, position.z);
             label.text = cell.coordinates.ToStringOnSeparateLines();
+            terrainer.SetTerrain(ref cell);
+            if(cell.terrain.Type == TerrainType.Water)
+            {
+                water[x, y] = false;
+            }
+            else
+            {
+                water[x, y] = true;
+            }
         }
         /// <summary>
         /// A* algorithm pathfinder
@@ -134,38 +153,79 @@ public class SquareGrid : MonoBehaviour, IGrid, IInput, IMarker
         /// <param name="movingLevels"></param>
         public Coordinates[] QuickestPath(SquareCell start, SquareCell end, MovingLevels movingLevels)
         {
-            (int, int) endCoords = end.coordinates;
-            bool[,] possibleField = new bool[height, width];
-            for (int i = 0; i < height; i++)
+            bool[,] possibleField = null;
+            switch (movingLevels)
             {
-                for (int j = 0; j < width; j++)
-                {
-                    if ((i == endCoords.Item1) && (j == endCoords.Item2))
-                    {
-                        possibleField[i, j] = true;
-                    }
-                    else
-                    {
-                        switch (movingLevels)
-                        {
-                            case MovingLevels.simpleMoving:
-                                break;
-                            case MovingLevels.ableToCrossWater:
-                                break;
-                            case MovingLevels.ableToStayInWater:
-                                break;
-                            case MovingLevels.ableToFly:
-                                break;
-                            default:
-                                break;
-                        }
-                        possibleField[i, j] = true;
-                    }
-
-                }
+                case MovingLevels.simpleMoving:
+                    possibleField = water;
+                    if (end.terrain.Type == TerrainType.Water) return null;
+                    break;
+                case MovingLevels.ableToCrossWater:
+                    if (end.terrain.Type == TerrainType.Water) return null;
+                    break;
+                case MovingLevels.ableToStayInWater:
+                    // But enemies
+                    possibleField = full;
+                    break;
+                case MovingLevels.ableToFly:
+                    possibleField = full;
+                    break;
+                default:
+                    break;
             }
+            possibleField[end.coordinates.X, end.coordinates.Y] = true;
             var res = AStarAlgorithm.FindPath(possibleField, start.coordinates, end.coordinates);
             return res;
+        }
+        [Serializable]
+        private class Terrainer
+        {
+            [SerializeField] TerrainPool pool; 
+            public void SetTerrain(ref SquareCell cell)
+            {
+                var tuple = pool.NextTerrain();
+                cell.terrain = tuple.terrain;
+                cell.GetComponent<Renderer>().material = tuple.material;
+            }
+            [Serializable]
+            private class TerrainPool
+            {
+                [SerializeField] Terrain desert = new Terrain(TerrainType.Desert);
+                [SerializeField] Material desertMaterial;
+                [SerializeField] Terrain forest = new Terrain(TerrainType.Forest);
+                [SerializeField] Material forestMaterial;
+                [SerializeField] Terrain water = new Terrain(TerrainType.Water);
+                [SerializeField] Material waterMaterial;
+                [SerializeField] Terrain mountain = new Terrain(TerrainType.Mountain);
+                [SerializeField] Material mountainMaterial;
+                [SerializeField] Terrain grassland = new Terrain(TerrainType.Grassland);
+                [SerializeField] Material grasslandMaterial;
+
+                public virtual (Terrain terrain, Material material) NextTerrain()
+                {
+                    int num = UnityEngine.Random.Range(1, 10);
+                    switch (num)
+                    {
+                        case 1:
+                        case 2:
+                            return (desert, desertMaterial);
+                        case 3:
+                        case 4:
+                            return (forest, forestMaterial);
+                        case 5:
+                        case 6:
+                            return (mountain, mountainMaterial);
+                        case 7:
+                        case 8:
+                            return (grassland, grasslandMaterial);
+                        case 9:
+                            return (water, waterMaterial);
+                        default:
+                            break;
+                    }
+                    throw new Exception();
+                }
+            }
         }
         private class AStarAlgorithm
         {
@@ -295,7 +355,7 @@ public class SquareGrid : MonoBehaviour, IGrid, IInput, IMarker
         {
             Ray ray = Camera.main.ScreenPointToRay(UnityEngine.Input.mousePosition);
             Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, LayerMask.GetMask("Cells"));
-            return hit.transform.gameObject.GetComponent<SquareCell>();
+            return hit.transform?.gameObject.GetComponent<SquareCell>();
         }
         /// <summary>
         /// Will invoke <paramref name="cellAction"/> after selecting a square

@@ -18,6 +18,36 @@ public class GameManagerComponent : MonoBehaviour
     {
         SquareGrid.fieldGrid.Initialize();
     }
+    /*
+    private void Update()
+    {
+            
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            StartCoroutine(nameof(Selecter), SquareGrid.GridInput.SelectCellFromMouse());
+        }
+        
+    }
+    private IEnumerator Selecter(SquareCell cell)
+    {
+        while (!Input.GetKey(KeyCode.P))
+        {
+            SquareGrid.GridMarker.UnmarkAll();
+            var endcell = SquareGrid.GridInput.SelectCellFromMouse();
+            if(endcell != null)
+            {
+                var cells = SquareGrid.MainGrid.QuickestPath(cell, endcell, MovingLevels.simpleMoving);
+                if (cells != null)
+                {
+                    foreach (var item in cells)
+                    {
+                        SquareGrid.GridMarker.Mark(item);
+                    }
+                }
+            }
+            yield return new WaitForEndOfFrame();
+        }
+    }*/
     public IEnumerator Delaying((float time, Action action) tuple)
     {
         yield return new WaitForSeconds(tuple.time);
