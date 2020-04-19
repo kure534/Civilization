@@ -67,6 +67,7 @@
     <Compile Include="Assets\GameManagerComponent.cs" />
     <Compile Include="Assets\Grid\SquareCell.cs" />
     <Compile Include="Assets\Grid\SquareGrid.cs" />
+    <Compile Include="Assets\Misc.cs" />
     <Compile Include="Assets\Technology\ResearchManager.cs" />
     <Compile Include="Assets\Units\UnitController.cs" />
     <None Include="Assets\Grid\Materials\Shader.shader" />

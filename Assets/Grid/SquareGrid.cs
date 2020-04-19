@@ -7,36 +7,27 @@ using UnityEngine;
 using UnityEngine.UI;
 
 [DisallowMultipleComponent]
-public class SquareGrid : MonoBehaviour, IGrid, IInput, IMarker
+public class SquareGrid : MonoBehaviour, IGrid, IInput, IMarker, IUniter
 {
     [SerializeField] Grid grid;
     [SerializeField] Marker marker;
+    [SerializeField] Uniter uniter;
 
     private Input input;
     private SquareCell[,] squareCells;
     private Canvas gridCanvas;
+    
     public static SquareGrid fieldGrid { get; private set; }
     public static IGrid MainGrid { get => fieldGrid as IGrid; }
     public static IInput GridInput { get => fieldGrid as IInput; }
     public static IMarker GridMarker { get => fieldGrid as IMarker; }
+    public static IUniter GridUniter { get => fieldGrid as IUniter; }
     void Awake()
     {
         // Just filling the fields
         input = new Input();
         fieldGrid = this;
         grid.gridCanvas = GetComponentInChildren<Canvas>();
-    }
-    /// <summary>
-    /// Move <paramref name="unit"/> on a <paramref name="vector"/>
-    /// </summary>
-    /// <param name="unit"></param>
-    /// <param name="vector"></param>
-    public void MoveUnit(UnitController unit, Vector2Int vector)
-    {
-        unit.coordinates += vector;
-        grid.TransferCoordinates(unit.coordinates, out float x, out float y);
-        unit.transform.position = new Vector3(x, unit.transform.position.y, y);
-        squareCells[unit.coordinates.X, unit.coordinates.Y].AddUnit(unit);
     }
     public void Initialize() => grid.Initialize(transform);
 
@@ -62,6 +53,91 @@ public class SquareGrid : MonoBehaviour, IGrid, IInput, IMarker
 
     void IMarker.Mark(SquareCell cell) => marker.Mark(cell);
     void IMarker.UnmarkAll() => marker.UnmarkAll();
+    void IUniter.Add(UnitType type, int belongility, Coordinates coords)
+    {
+        grid.TransferCoordinates(coords, out float x, out float y);
+        var unit = uniter.CreateUnit(type, belongility, new Vector3(x,0,y), transform);
+        unit.coordinates = coords;
+        grid.squareCells[coords.X, coords.Y].AddUnit(unit);
+    }
+
+    void IUniter.Move(UnitController unit, Coordinates square)
+    {
+        Vector3 start = grid.TransferCoordinates(unit.coordinates);
+        Vector3 end = grid.TransferCoordinates(square);
+        uniter.Move(unit, end-start, end);
+        unit.coordinates = square;
+    }
+    void IUniter.Move(UnitController unit, Coordinates[] squares)
+    {
+        Vector3[] positions = new Vector3[squares.Length];
+        for (int i = 0; i < positions.Length; i++)
+        {
+            positions[i] = grid.TransferCoordinates(squares[i]);
+        }
+        uniter.Move(unit, positions);
+    }
+    [System.Serializable]
+    private class Uniter
+    {
+        [SerializeField] UnitController army;
+        [SerializeField] UnitController scout;
+        public UnitController CreateUnit(UnitType unit, int belongility, Vector3 position, Transform parent)
+        {
+            UnitController unitController = null;
+            switch (unit)
+            {
+                case UnitType.Army:
+                    unitController = Instantiate(army, position, Quaternion.identity, parent);
+                    break;
+                case UnitType.Scout:
+                    unitController = Instantiate(scout, position, Quaternion.identity, parent);
+                    break;
+                default:
+                    break;
+            }
+            unitController.belonging = belongility;
+            return unitController;
+        }
+        [SerializeField] int frames;
+        public void Move(UnitController unit, Vector3 vector, Vector3 endPos)
+        {
+            Vector3 vect = vector / frames;
+            int i = 0;
+            int frams = frames;
+            GameManager.Manager.StartGenericCoroutine(() =>
+            {
+                unit.transform.Translate(vect);
+                i++;
+                if (i == frames)
+                {
+                    unit.transform.position = endPos;
+                    return true;
+                }
+                return false;
+            });
+        }
+        public void Move(UnitController unit, Vector3[] positions)
+        {
+            int frameIterator = 0;
+            int posIterator = 1;
+            Vector3 vector = (positions[1] - positions[0]) / frames;
+            GameManager.Manager.StartGenericCoroutine(() =>
+            {
+                unit.transform.Translate(vector);
+                frameIterator++;
+                if(frameIterator == frames)
+                {
+                    unit.transform.position = positions[posIterator];
+                    posIterator++;
+                    if (positions.Length == posIterator) return true;
+                    vector = (positions[posIterator] - positions[posIterator - 1]) / frames;
+                    frameIterator = 0;
+                }
+                return false;
+            });
+        }
+    }
 
     [System.Serializable]
     private class Grid
@@ -118,6 +194,16 @@ public class SquareGrid : MonoBehaviour, IGrid, IInput, IMarker
         {
             x = coords.X * prefabLength;
             y = coords.Y * prefabLength;
+        }
+        /// <summary>
+        /// Transfer cell grid coordinates to world space coordinates
+        /// </summary>
+        /// <param name="coords"></param>
+        public Vector3 TransferCoordinates(Coordinates coords)
+        {
+           float x = coords.X * prefabLength;
+           float y = coords.Y * prefabLength;
+            return new Vector3(x, 0, y);
         }
         private void CreateCell(int x, int y, in Transform parentObject)
         {
@@ -192,12 +278,16 @@ public class SquareGrid : MonoBehaviour, IGrid, IInput, IMarker
             {
                 [SerializeField] Terrain desert = new Terrain(TerrainType.Desert);
                 [SerializeField] Material desertMaterial;
+                [Space(4)]
                 [SerializeField] Terrain forest = new Terrain(TerrainType.Forest);
                 [SerializeField] Material forestMaterial;
+                [Space(4)]
                 [SerializeField] Terrain water = new Terrain(TerrainType.Water);
                 [SerializeField] Material waterMaterial;
+                [Space(4)]
                 [SerializeField] Terrain mountain = new Terrain(TerrainType.Mountain);
                 [SerializeField] Material mountainMaterial;
+                [Space(4)]
                 [SerializeField] Terrain grassland = new Terrain(TerrainType.Grassland);
                 [SerializeField] Material grasslandMaterial;
 
@@ -450,6 +540,12 @@ public interface IInput
     /// </summary>
     void InterruptWaiting(int id);
 }
+public interface IUniter    
+{
+    void Add(UnitType unitType, int belongility, Coordinates coords);
+    void Move(UnitController unit, Coordinates square);
+    void Move(UnitController unit, Coordinates[] squares);
+}
 public interface IMarker
 {
     void Mark(SquareCell cell);
@@ -464,4 +560,9 @@ public enum MovingLevels
     ableToCrossWater,
     ableToStayInWater,
     ableToFly
+}
+public enum UnitType
+{
+    Army,
+    Scout
 }
