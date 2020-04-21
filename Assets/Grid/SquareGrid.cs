@@ -70,13 +70,16 @@ public class SquareGrid : MonoBehaviour, IGrid, IInput, IMarker, IUniter
     }
     void IUniter.Move(UnitController unit, Coordinates[] squares)
     {
-        Vector3[] positions = new Vector3[squares.Length];
-        for (int i = 0; i < positions.Length; i++)
-        {
-            positions[i] = grid.TransferCoordinates(squares[i]);
-        }
+        var positions = grid.TransferCoordinates(squares);
         uniter.Move(unit, positions);
     }
+
+    void IUniter.Move(UnitController unit, Coordinates[] squares, Action action)
+    {
+        var positions = grid.TransferCoordinates(squares);
+        uniter.Move(unit, positions, action);
+    }
+    
     [System.Serializable]
     private class Uniter
     {
@@ -117,7 +120,15 @@ public class SquareGrid : MonoBehaviour, IGrid, IInput, IMarker, IUniter
                 return false;
             });
         }
+        public void Move(UnitController unit, Vector3[] positions, Action action)
+        {
+            MoveUnits(unit, positions, action);
+        }
         public void Move(UnitController unit, Vector3[] positions)
+        {
+            MoveUnits(unit, positions, null);
+        }
+        private void MoveUnits(UnitController unit, Vector3[] positions, Action action)
         {
             int frameIterator = 0;
             int posIterator = 1;
@@ -126,11 +137,15 @@ public class SquareGrid : MonoBehaviour, IGrid, IInput, IMarker, IUniter
             {
                 unit.transform.Translate(vector);
                 frameIterator++;
-                if(frameIterator == frames)
+                if (frameIterator == frames)
                 {
                     unit.transform.position = positions[posIterator];
                     posIterator++;
-                    if (positions.Length == posIterator) return true;
+                    if (positions.Length == posIterator)
+                    {
+                        action?.Invoke();
+                        return true;
+                    }
                     vector = (positions[posIterator] - positions[posIterator - 1]) / frames;
                     frameIterator = 0;
                 }
@@ -204,6 +219,15 @@ public class SquareGrid : MonoBehaviour, IGrid, IInput, IMarker, IUniter
            float x = coords.X * prefabLength;
            float y = coords.Y * prefabLength;
             return new Vector3(x, 0, y);
+        }
+        public Vector3[] TransferCoordinates(Coordinates[] coords)
+        {
+            Vector3[] positions = new Vector3[coords.Length];
+            for (int i = 0; i < positions.Length; i++)
+            {
+                positions[i] = TransferCoordinates(coords[i]);
+            }
+            return positions;
         }
         private void CreateCell(int x, int y, in Transform parentObject)
         {
@@ -545,6 +569,7 @@ public interface IUniter
     void Add(UnitType unitType, int belongility, Coordinates coords);
     void Move(UnitController unit, Coordinates square);
     void Move(UnitController unit, Coordinates[] squares);
+    void Move(UnitController unit, Coordinates[] squares, Action action);
 }
 public interface IMarker
 {

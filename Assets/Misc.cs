@@ -19,16 +19,17 @@ public class Misc : MonoBehaviour
                 {
                     SquareGrid.GridUniter.Add(UnitType.Army, 0, SquareGrid.GridInput.SelectCellFromMouse().coordinates);
                     isCreated = true;
+                    yield return new WaitForSeconds(1);
                 }
                 else
                 {
                     var cell = SquareGrid.GridInput.SelectCellFromMouse();
                     if (cell.Units.Length != 0)
                     {
-                        GameManager.Manager.Delay(1, () => StartCoroutine(nameof(SelectPath), cell));
+                        StartCoroutine(nameof(SelectPath), cell);
+                        yield return new WaitForSeconds(1);
                     }
                 }
-                yield return new WaitForSeconds(1);
             }
             yield return new WaitForEndOfFrame();
         }
@@ -39,7 +40,7 @@ public class Misc : MonoBehaviour
         IInput gridInput = SquareGrid.GridInput;
         IGrid grid = SquareGrid.MainGrid;
         IMarker gridMarker = SquareGrid.GridMarker;
-        while (!Input.GetMouseButton(0))
+        while (true)
         {
             gridMarker.UnmarkAll();
             var end = gridInput.SelectCellFromMouse();
@@ -50,7 +51,14 @@ public class Misc : MonoBehaviour
                 {
                     gridMarker.Mark(square);
                 }
-            } 
+            }
+            if (Input.GetMouseButton(0))
+            {
+                if(path != null && path.Length > 1 )
+                {
+                    break;
+                }
+            }
             yield return new WaitForEndOfFrame();
         }
         Coordinates[] coords = new Coordinates[path.Length];
@@ -58,6 +66,6 @@ public class Misc : MonoBehaviour
         {
             coords[i] = path[i].coordinates;
         }
-        SquareGrid.GridUniter.Move(start.Units[0], coords);
+        SquareGrid.GridUniter.Move(start.Units[0], coords, gridMarker.UnmarkAll);
     }
 }

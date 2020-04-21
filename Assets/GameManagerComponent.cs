@@ -48,6 +48,7 @@ public class GameManager
     public void Initialize()
     {
         Manager = this;
+        coroutines = new List<Coroutine>();
     }
     /// <summary>
     /// It will invoke <paramref name="action"/> after <paramref name="time"/> seconds
@@ -67,6 +68,7 @@ public class GameManager
     {
         Coroutine c = managerComponent.StartCoroutine(nameof(managerComponent.GenericCoroutine), func);
         coroutines.Add(c);
+
         return coroutines.Count - 1;
     }
     public void StopCoroutine(int id)
